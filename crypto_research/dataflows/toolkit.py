@@ -12,6 +12,7 @@ from .coinmarketcap_utils import (
 )
 from .coincap_utils import (
     get_historical_quotes,
+    get_macd,
 )
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
@@ -307,74 +308,24 @@ class Toolkit:
         Calculate technical indicators for cryptocurrency
         """
         try:
-            # Get price data
-            end_date = datetime.strptime(curr_date, "%Y-%m-%d")
-            start_date = end_date - timedelta(
-                days=look_back_days + 50
-            )  # Extra days for indicator calculation
-
-            df = get_historical_quotes(
-                symbol, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+            macd_df = get_macd(
+                symbol=symbol, short=12, long=26, signal=9, fetchInterval="d1"
             )
 
-            if df.empty:
-                return f"No price data available for {symbol} to calculate indicators"
+            # Start off with explanation of how to use indicator
+            result_str = """
+            If histogram is above zero, it indicates bullish momentum, which is an indicator to go long.
+            If histogram below zero, it indicates bearish momentum, which is an indicator to go short.
+            """
 
-            # Prepare data for stockstats
-            df_stats = df.copy()
-            df_stats.columns = [col.lower() for col in df_stats.columns]
+            result_str = f"## MACD indicator values for {symbol}:\n\n"
 
-            # Calculate indicators using stockstats
-            from stockstats import StockDataFrame
-
-            stock = StockDataFrame.retype(df_stats)
-
-            if indicator is None:
-                indicators = [
-                    "rsi",
-                    "macd",
-                    "boll",
-                    "atr",
-                    "close_50_sma",
-                    "close_200_sma",
-                ]
-            else:
-                indicators = [indicator.lower()]
-
-            for indicator in indicators:
-
-                # Get indicator values
-                indicator_values = stock[indicator]
-
-                # Filter to requested date range
-                indicator_values = indicator_values[
-                    indicator_values.index
-                    >= (end_date - timedelta(days=look_back_days))
-                ]
-
-                # Format result
-                result_str = f"## {indicator} values for {symbol} from {(end_date - timedelta(days=look_back_days)).strftime('%Y-%m-%d')} to {curr_date}:\n\n"
-
-                for date, value in indicator_values.items():
-                    result_str += f"{date.strftime('%Y-%m-%d')}: {value:.4f}\n"
-
-                # Add indicator description
-                indicator_descriptions = {
-                    "rsi": "RSI: Relative Strength Index measures momentum. Values above 70 indicate overbought, below 30 indicate oversold.",
-                    "macd": "MACD: Moving Average Convergence Divergence shows trend changes through the relationship between two moving averages.",
-                    "boll": "Bollinger Bands: Middle band (20-day SMA) with upper/lower bands showing volatility.",
-                    "atr": "ATR: Average True Range measures volatility. Higher values indicate higher volatility.",
-                    "close_50_sma": "50-day Simple Moving Average: Medium-term trend indicator.",
-                    "close_200_sma": "200-day Simple Moving Average: Long-term trend indicator.",
-                }
-
-                if indicator in indicator_descriptions:
-                    result_str += f"\n{indicator_descriptions[indicator]}"
+            result_str += macd_df.tail(look_back_days).to_string()
 
             return result_str
 
-        except Exception as e:
-            return f"Error calculating {indicator} for {symbol}: {str(e)}"
+        except:
+            return "Error fetching technical indicators."
 
     @tool
     @staticmethod

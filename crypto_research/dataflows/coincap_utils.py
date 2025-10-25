@@ -25,7 +25,7 @@ def get_historical_quotes(
     end_date: str,
     interval: Optional[
         Literal["m1", "m5", "m15", "m30", "h1", "h2", "h6", "h12", "d1"]
-    ] = "h1",
+    ] = "d1",
 ) -> pd.DataFrame:
     """
     Get historical OHLCV data for a cryptocurrency using CoinCap API
@@ -100,7 +100,13 @@ def get_historical_quotes(
     return df
 
 
-def get_macd(symbol: str):
+def get_macd(
+    symbol: str,
+    short: Optional[int] = 12,
+    long: Optional[int] = 26,
+    signal: Optional[int] = 9,
+    fetchInterval: Optional[str] = "d1",
+) -> pd.DataFrame:
     """
     Gets MACD technical indicator for a cryptocurrency using CoinCap API
     """
@@ -112,7 +118,13 @@ def get_macd(symbol: str):
     api_key = os.getenv("COINCAP_API_KEY")
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    params = {}
+
+    params = {
+        "short": short,
+        "long": long,
+        "signal": signal,
+        "fetchInterval": fetchInterval,
+    }
     # Make the request with error handling
     response = None
     try:
@@ -134,8 +146,8 @@ def get_macd(symbol: str):
         return pd.DataFrame()
 
     # Parse response data
-    if "data" not in data or not data["data"]:
-        print(f"No historical data available for {symbol}")
+    if "macd" not in data or not data["macd"]:
+        print(f"No MACD data available for {symbol}")
         return pd.DataFrame()
 
     # Convert to DataFrame
