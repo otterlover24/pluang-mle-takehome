@@ -117,61 +117,61 @@ class CoinMarketCapAPI:
 
         return self._make_request(endpoint, params)
 
-    def get_historical_quotes(
-        self, symbol: str, start_date: str, end_date: str
-    ) -> pd.DataFrame:
-        """
-        Get historical OHLCV data for a cryptocurrency
+    # def get_historical_quotes(
+    #     self, symbol: str, start_date: str, end_date: str
+    # ) -> pd.DataFrame:
+    #     """
+    #     Get historical OHLCV data for a cryptocurrency
 
-        Args:
-            symbol: Cryptocurrency symbol
-            start_date: Start date (YYYY-MM-DD)
-            end_date: End date (YYYY-MM-DD)
+    #     Args:
+    #         symbol: Cryptocurrency symbol
+    #         start_date: Start date (YYYY-MM-DD)
+    #         end_date: End date (YYYY-MM-DD)
 
-        Returns:
-            DataFrame with OHLCV data
-        """
-        crypto_id = self.get_crypto_id(symbol)
+    #     Returns:
+    #         DataFrame with OHLCV data
+    #     """
+    #     crypto_id = self.get_crypto_id(symbol)
 
-        # Convert dates to timestamps
-        start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp())
-        end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp())
+    #     # Convert dates to timestamps
+    #     start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp())
+    #     end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp())
 
-        endpoint = "/v2/cryptocurrency/ohlcv/historical"
-        params = {
-            "id": crypto_id,
-            "time_start": start_ts,
-            "time_end": end_ts,
-            "convert": "USD",
-            "interval": "daily",
-        }
+    #     endpoint = "/v2/cryptocurrency/ohlcv/historical"
+    #     params = {
+    #         "id": crypto_id,
+    #         "time_start": start_ts,
+    #         "time_end": end_ts,
+    #         "convert": "USD",
+    #         "interval": "daily",
+    #     }
 
-        response = self._make_request(endpoint, params)
+    #     response = self._make_request(endpoint, params)
 
-        # Convert to DataFrame
-        quotes = response.get("data", {}).get("quotes", [])
-        if not quotes:
-            return pd.DataFrame()
+    #     # Convert to DataFrame
+    #     quotes = response.get("data", {}).get("quotes", [])
+    #     if not quotes:
+    #         return pd.DataFrame()
 
-        df_data = []
-        for quote in quotes:
-            df_data.append(
-                {
-                    "Date": quote["time_open"],
-                    "Open": quote["quote"]["USD"]["open"],
-                    "High": quote["quote"]["USD"]["high"],
-                    "Low": quote["quote"]["USD"]["low"],
-                    "Close": quote["quote"]["USD"]["close"],
-                    "Volume": quote["quote"]["USD"]["volume"],
-                    "Market_Cap": quote["quote"]["USD"]["market_cap"],
-                }
-            )
+    #     df_data = []
+    #     for quote in quotes:
+    #         df_data.append(
+    #             {
+    #                 "Date": quote["time_open"],
+    #                 "Open": quote["quote"]["USD"]["open"],
+    #                 "High": quote["quote"]["USD"]["high"],
+    #                 "Low": quote["quote"]["USD"]["low"],
+    #                 "Close": quote["quote"]["USD"]["close"],
+    #                 "Volume": quote["quote"]["USD"]["volume"],
+    #                 "Market_Cap": quote["quote"]["USD"]["market_cap"],
+    #             }
+    #         )
 
-        df = pd.DataFrame(df_data)
-        df["Date"] = pd.to_datetime(df["Date"])
-        df.set_index("Date", inplace=True)
+    #     df = pd.DataFrame(df_data)
+    #     df["Date"] = pd.to_datetime(df["Date"])
+    #     df.set_index("Date", inplace=True)
 
-        return df
+    #     return df
 
     def get_crypto_info(self, symbols: List[str]) -> Dict:
         """

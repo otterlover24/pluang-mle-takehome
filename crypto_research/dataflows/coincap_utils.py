@@ -12,90 +12,82 @@ from functools import lru_cache
 import pandas as pd
 
 
-class CoinCapAPI:
+base_url = "https://rest.coincap.io"
+symbol_to_slug = {
+    "btc": "bitcoin",
+    "eth": "ethereum",
+}
+
+
+def get_historical_quotes(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
     """
-    CoinCap API wrapper for cryptocurrency data
+    Get historical OHLCV data for a cryptocurrency using CoinCap API
+
+    Args:
+        symbol: Cryptocurrency symbol (e.g., 'bitcoin', 'ethereum')
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+
+    Returns:
+        DataFrame with OHLCV data
     """
+    # Convert dates to millisecond timestamps for CoinCap API
+    start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp() * 1000)
+    end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp() * 1000)
 
-    base_url = "https://rest.coincap.io"
-    symbol_to_slug = {
-        "btc": "bitcoin",
-        "eth": "ethereum",
-    }
+    # CoinCap uses asset IDs (lowercase names like 'bitcoin', 'ethereum')
+    asset_id = symbol.lower()
 
-    def get_historical_quotes(
-        self, symbol: str, start_date: str, end_date: str
-    ) -> pd.DataFrame:
-        """
-        Get historical OHLCV data for a cryptocurrency using CoinCap API
+    # Build the URL and parameters
+    endpoint = f"/v3/assets/{symbol_to_slug.get(asset_id, asset_id)}/history"
+    url = f"{base_url}{endpoint}"
 
-        Args:
-            symbol: Cryptocurrency symbol (e.g., 'bitcoin', 'ethereum')
-            start_date: Start date (YYYY-MM-DD)
-            end_date: End date (YYYY-MM-DD)
+    params = {"interval": "d1", "start": start_ts, "end": end_ts}  # Daily interval
 
-        Returns:
-            DataFrame with OHLCV data
-        """
-        # Convert dates to millisecond timestamps for CoinCap API
-        start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp() * 1000)
-        end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp() * 1000)
+    # Set up headers (optional API key for higher rate limits)
+    headers = {}
+    api_key = os.getenv("COINCAP_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
-        # CoinCap uses asset IDs (lowercase names like 'bitcoin', 'ethereum')
-        asset_id = symbol.lower()
+    # Make the request with error handling
+    response = None
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-        # Build the URL and parameters
-        endpoint = f"/v3/assets/{self.symbol_to_slug.get(asset_id, asset_id)}/history"
-        url = f"{self.base_url}{endpoint}"
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        print(f"Response: {response.text if response is not None else 'No response'}")
+        return pd.DataFrame()
 
-        params = {"interval": "d1", "start": start_ts, "end": end_ts}  # Daily interval
+    except requests.exceptions.Timeout:
+        print(f"Request timeout for {symbol}")
+        return pd.DataFrame()
 
-        # Set up headers (optional API key for higher rate limits)
-        headers = {}
-        api_key = os.getenv("COINCAP_API_KEY")
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed for {symbol}: {str(e)}")
+        return pd.DataFrame()
 
-        # Make the request with error handling
-        response = None
-        try:
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+    # Parse response data
+    if "data" not in data or not data["data"]:
+        print(f"No historical data available for {symbol}")
+        return pd.DataFrame()
 
-        except requests.exceptions.HTTPError as e:
-            print(f"HTTP Error: {e}")
-            print(
-                f"Response: {response.text if response is not None else 'No response'}"
-            )
-            return pd.DataFrame()
+    # Convert to DataFrame
+    quotes = data["data"]
+    df_data = []
 
-        except requests.exceptions.Timeout:
-            print(f"Request timeout for {symbol}")
-            return pd.DataFrame()
+    for quote in quotes:
+        df_data.append(
+            {
+                "Date": datetime.fromisoformat(quote["date"]),
+                "Price USD": float(quote["priceUsd"]),
+            }
+        )
 
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed for {symbol}: {str(e)}")
-            return pd.DataFrame()
+    df = pd.DataFrame(df_data)
+    df.set_index("Date", inplace=True)
 
-        # Parse response data
-        if "data" not in data or not data["data"]:
-            print(f"No historical data available for {symbol}")
-            return pd.DataFrame()
-
-        # Convert to DataFrame
-        quotes = data["data"]
-        df_data = []
-
-        for quote in quotes:
-            df_data.append(
-                {
-                    "Date": datetime.fromisoformat(quote["date"]),
-                    "Price USD": float(quote["priceUsd"]),
-                }
-            )
-
-        df = pd.DataFrame(df_data)
-        df.set_index("Date", inplace=True)
-
-        return df
+    return df

@@ -2,6 +2,7 @@
 Cryptocurrency Market Analyst Agent
 Analyzes crypto market data, technical indicators, and price movements.
 """
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
@@ -9,10 +10,11 @@ def create_crypto_market_analyst(llm, toolkit):
     """
     Create a cryptocurrency market analyst agent
     """
+
     def crypto_market_analyst_node(state):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        
+
         if toolkit.config["online_tools"]:
             tools = [
                 toolkit.get_crypto_price_data_window,
@@ -24,7 +26,7 @@ def create_crypto_market_analyst(llm, toolkit):
                 toolkit.get_crypto_price_data_window,
                 toolkit.get_crypto_technical_indicators,
             ]
-        
+
         system_message = """You are a cryptocurrency market analyst specializing in technical analysis and market trends. 
         Your role is to analyze crypto market data and provide insights for trading decisions.
         
@@ -68,7 +70,7 @@ def create_crypto_market_analyst(llm, toolkit):
         
         First retrieve price data, then calculate relevant indicators. Provide a detailed analysis
         of trends, patterns, and potential trading opportunities. Include a summary table at the end."""
-        
+
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -85,58 +87,58 @@ def create_crypto_market_analyst(llm, toolkit):
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
-        
+
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
         prompt = prompt.partial(ticker=ticker)
-        
+
         # Execute tools directly to get market data
         ticker = state["company_of_interest"]
-        
+
         # Get price data first
         try:
-            price_data = toolkit.get_crypto_price_data_window.invoke({
-                "symbol": ticker,
-                "curr_date": current_date,
-                "look_back_days": 30
-            })
+            price_data = toolkit.get_crypto_price_data_window.invoke(
+                {"symbol": ticker, "curr_date": current_date, "look_back_days": 30}
+            )
         except Exception as e:
             price_data = f"Error retrieving price data: {str(e)}"
-        
+
         # Get technical indicators
         try:
-            tech_indicators = toolkit.get_crypto_technical_indicators.invoke({
-                "symbol": ticker,
-                "curr_date": current_date,
-                "look_back_days": 30
-            })
+            tech_indicators = toolkit.get_crypto_technical_indicators.invoke(
+                {"symbol": ticker, "curr_date": current_date, "look_back_days": 30}
+            )
         except Exception as e:
             tech_indicators = f"Error retrieving technical indicators: {str(e)}"
-        
+
         # Prepare tool results for analysis
-        tool_results = f"Price Data:\n{price_data}\n\nTechnical Indicators:\n{tech_indicators}"
-        
+        tool_results = (
+            f"Price Data:\n{price_data}\n\nTechnical Indicators:\n{tech_indicators}"
+        )
+
+        print(f"crypto market analyst Tool Results:\n{tool_results}")
+
         # Create analysis prompt with tool results
         analysis_prompt = f"""Based on the following market data for {ticker}, provide a comprehensive technical analysis:
 
 {tool_results}
 
 Please analyze trends, patterns, and potential trading opportunities. Include a summary table at the end."""
-        
+
         # Create chain without tools for analysis
         chain = prompt | llm
-        
+
         # Create messages with tool results
         messages_with_data = state["messages"] + [
             {"role": "user", "content": analysis_prompt}
         ]
-        
+
         result = chain.invoke(messages_with_data)
-        
+
         return {
             "messages": [result],
             "market_report": result.content,
         }
-    
+
     return crypto_market_analyst_node
