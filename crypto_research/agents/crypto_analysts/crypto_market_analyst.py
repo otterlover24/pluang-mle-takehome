@@ -107,7 +107,12 @@ def create_crypto_market_analyst(llm, toolkit):
         # Get technical indicators
         try:
             tech_indicators = toolkit.get_crypto_technical_indicators.invoke(
-                {"symbol": ticker, "curr_date": current_date, "look_back_days": 30}
+                {
+                    "symbol": ticker,
+                    "indicator": None,
+                    "curr_date": current_date,
+                    "look_back_days": 30,
+                }
             )
         except Exception as e:
             tech_indicators = f"Error retrieving technical indicators: {str(e)}"

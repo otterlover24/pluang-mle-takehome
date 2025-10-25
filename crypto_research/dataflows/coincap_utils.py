@@ -6,7 +6,7 @@ import os
 import json
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Literal, Optional, Any
 import time
 from functools import lru_cache
 import pandas as pd
@@ -19,7 +19,14 @@ symbol_to_slug = {
 }
 
 
-def get_historical_quotes(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+def get_historical_quotes(
+    symbol: str,
+    start_date: str,
+    end_date: str,
+    interval: Optional[
+        Literal["m1", "m5", "m15", "m30", "h1", "h2", "h6", "h12", "d1"]
+    ] = "h1",
+) -> pd.DataFrame:
     """
     Get historical OHLCV data for a cryptocurrency using CoinCap API
 
@@ -42,7 +49,7 @@ def get_historical_quotes(symbol: str, start_date: str, end_date: str) -> pd.Dat
     endpoint = f"/v3/assets/{symbol_to_slug.get(asset_id, asset_id)}/history"
     url = f"{base_url}{endpoint}"
 
-    params = {"interval": "d1", "start": start_ts, "end": end_ts}  # Daily interval
+    params = {"interval": interval, "start": start_ts, "end": end_ts}  # Daily interval
 
     # Set up headers (optional API key for higher rate limits)
     headers = {}

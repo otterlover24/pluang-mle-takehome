@@ -17,7 +17,8 @@ setup(
         "requests>=2.28.0",
         "beautifulsoup4>=4.11.0",
         "questionary>=2.0.1",
-        "markdown>=3.5.0"
+        "markdown>=3.5.0",
+        "stockstats>=0.6.5",
     ],
     entry_points={
         "console_scripts": [

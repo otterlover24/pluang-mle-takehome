@@ -299,7 +299,7 @@ class Toolkit:
     @staticmethod
     def get_crypto_technical_indicators(
         symbol: Annotated[str, "Cryptocurrency symbol"],
-        indicator: Annotated[str, "Technical indicator name"],
+        indicator: Optional[Annotated[str, "Technical indicator name"]],
         curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
         look_back_days: Annotated[int, "How many days to look back"],
     ) -> str:
@@ -313,7 +313,7 @@ class Toolkit:
                 days=look_back_days + 50
             )  # Extra days for indicator calculation
 
-            df = get_crypto_price_data(
+            df = get_historical_quotes(
                 symbol, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
             )
 
@@ -329,32 +329,47 @@ class Toolkit:
 
             stock = StockDataFrame.retype(df_stats)
 
-            # Get indicator values
-            indicator_values = stock[indicator]
+            if indicator is None:
+                indicators = [
+                    "rsi",
+                    "macd",
+                    "boll",
+                    "atr",
+                    "close_50_sma",
+                    "close_200_sma",
+                ]
+            else:
+                indicators = [indicator.lower()]
 
-            # Filter to requested date range
-            indicator_values = indicator_values[
-                indicator_values.index >= (end_date - timedelta(days=look_back_days))
-            ]
+            for indicator in indicators:
 
-            # Format result
-            result_str = f"## {indicator} values for {symbol} from {(end_date - timedelta(days=look_back_days)).strftime('%Y-%m-%d')} to {curr_date}:\n\n"
+                # Get indicator values
+                indicator_values = stock[indicator]
 
-            for date, value in indicator_values.items():
-                result_str += f"{date.strftime('%Y-%m-%d')}: {value:.4f}\n"
+                # Filter to requested date range
+                indicator_values = indicator_values[
+                    indicator_values.index
+                    >= (end_date - timedelta(days=look_back_days))
+                ]
 
-            # Add indicator description
-            indicator_descriptions = {
-                "rsi": "RSI: Relative Strength Index measures momentum. Values above 70 indicate overbought, below 30 indicate oversold.",
-                "macd": "MACD: Moving Average Convergence Divergence shows trend changes through the relationship between two moving averages.",
-                "boll": "Bollinger Bands: Middle band (20-day SMA) with upper/lower bands showing volatility.",
-                "atr": "ATR: Average True Range measures volatility. Higher values indicate higher volatility.",
-                "close_50_sma": "50-day Simple Moving Average: Medium-term trend indicator.",
-                "close_200_sma": "200-day Simple Moving Average: Long-term trend indicator.",
-            }
+                # Format result
+                result_str = f"## {indicator} values for {symbol} from {(end_date - timedelta(days=look_back_days)).strftime('%Y-%m-%d')} to {curr_date}:\n\n"
 
-            if indicator in indicator_descriptions:
-                result_str += f"\n{indicator_descriptions[indicator]}"
+                for date, value in indicator_values.items():
+                    result_str += f"{date.strftime('%Y-%m-%d')}: {value:.4f}\n"
+
+                # Add indicator description
+                indicator_descriptions = {
+                    "rsi": "RSI: Relative Strength Index measures momentum. Values above 70 indicate overbought, below 30 indicate oversold.",
+                    "macd": "MACD: Moving Average Convergence Divergence shows trend changes through the relationship between two moving averages.",
+                    "boll": "Bollinger Bands: Middle band (20-day SMA) with upper/lower bands showing volatility.",
+                    "atr": "ATR: Average True Range measures volatility. Higher values indicate higher volatility.",
+                    "close_50_sma": "50-day Simple Moving Average: Medium-term trend indicator.",
+                    "close_200_sma": "200-day Simple Moving Average: Long-term trend indicator.",
+                }
+
+                if indicator in indicator_descriptions:
+                    result_str += f"\n{indicator_descriptions[indicator]}"
 
             return result_str
 
