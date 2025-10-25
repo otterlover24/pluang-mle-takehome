@@ -98,3 +98,61 @@ def get_historical_quotes(
     df.set_index("Date", inplace=True)
 
     return df
+
+
+def get_macd(symbol: str):
+    """
+    Gets MACD technical indicator for a cryptocurrency using CoinCap API
+    """
+    slug = symbol_to_slug.get(symbol.lower(), symbol.lower())
+    url = f"{base_url}/v3/ta/{slug}/macd"
+
+    # Set up headers (optional API key for higher rate limits)
+    headers = {}
+    api_key = os.getenv("COINCAP_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    params = {}
+    # Make the request with error handling
+    response = None
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        print(f"Response: {response.text if response is not None else 'No response'}")
+        return pd.DataFrame()
+
+    except requests.exceptions.Timeout:
+        print(f"Request timeout for {symbol}")
+        return pd.DataFrame()
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed for {symbol}: {str(e)}")
+        return pd.DataFrame()
+
+    # Parse response data
+    if "data" not in data or not data["data"]:
+        print(f"No historical data available for {symbol}")
+        return pd.DataFrame()
+
+    # Convert to DataFrame
+    macd_array = data["macd"]
+    df_data = []
+
+    for macd_entry in macd_array:
+        df_data.append(
+            {
+                "Date": datetime.fromisoformat(macd_entry["date"]),
+                "MACD": float(macd_entry["macd"]),
+                "Signal": float(macd_entry["signal"]),
+                "Histogram": float(macd_entry["histogram"]),
+            }
+        )
+
+    df = pd.DataFrame(df_data)
+    df.set_index("Date", inplace=True)
+
+    return df
