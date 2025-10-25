@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 import datetime
 import typer
@@ -105,7 +106,7 @@ class MessageBuffer:
             section_titles = {
                 "market_report": "Crypto Market Analysis",
                 "sentiment_report": "Crypto Social Sentiment",
-                "news_report": "Crypto News Analysis", 
+                "news_report": "Crypto News Analysis",
                 "fundamentals_report": "Crypto Fundamentals Analysis",
                 "investment_plan": "Research Team Decision",
                 "trader_investment_plan": "Trading Team Plan",
@@ -217,7 +218,7 @@ def update_display(layout, spinner_text=None):
     teams = {
         "Crypto Analysts": [
             "Crypto Market Analyst",
-            "Crypto Social Analyst", 
+            "Crypto Social Analyst",
             "Crypto News Analyst",
             "Crypto Fundamentals Analyst",
         ],
@@ -387,9 +388,7 @@ def get_user_selections():
     welcome_content += "[bold green]CryptoAgents: Multi-Agents LLM Cryptocurrency Trading Framework - CLI[/bold green]\n\n"
     welcome_content += "[bold]Workflow Steps:[/bold]\n"
     welcome_content += "I. Crypto Analyst Team → II. Research Team → III. Trader → IV. Risk Management → V. Portfolio Management\n\n"
-    welcome_content += (
-        "[dim]Cryptocurrency Trading with Multi-Agent LLMs[/dim]"
-    )
+    welcome_content += "[dim]Cryptocurrency Trading with Multi-Agent LLMs[/dim]"
 
     # Create and center the welcome box
     welcome_box = Panel(
@@ -413,7 +412,9 @@ def get_user_selections():
     # Step 1: Cryptocurrency symbol
     console.print(
         create_question_box(
-            "Step 1: Cryptocurrency Symbol", "Enter the cryptocurrency symbol to analyze", "BTC"
+            "Step 1: Cryptocurrency Symbol",
+            "Enter the cryptocurrency symbol to analyze",
+            "BTC",
         )
     )
     selected_ticker = get_crypto_symbol()
@@ -470,16 +471,20 @@ def get_user_selections():
 def get_crypto_symbol():
     """Get cryptocurrency symbol from user input with validation."""
     from crypto_research.research_configs import validate_crypto_symbol
-    
+
     while True:
         symbol = typer.prompt("", default="BTC").upper()
-        
+
         if validate_crypto_symbol(symbol):
             return symbol
         else:
             supported_symbols = ", ".join(CRYPTO_CONFIG["supported_cryptos"])
-            console.print(f"[red]Error: '{symbol}' is not a supported cryptocurrency. Supported symbols: {supported_symbols}[/red]")
-            console.print("[yellow]Please enter a valid cryptocurrency symbol:[/yellow]")
+            console.print(
+                f"[red]Error: '{symbol}' is not a supported cryptocurrency. Supported symbols: {supported_symbols}[/red]"
+            )
+            console.print(
+                "[yellow]Please enter a valid cryptocurrency symbol:[/yellow]"
+            )
 
 
 def get_analysis_date():
@@ -794,7 +799,9 @@ def run_analysis():
                     message_buffer.update_report_section(
                         "market_report", chunk["market_report"]
                     )
-                    message_buffer.update_agent_status("Crypto Market Analyst", "completed")
+                    message_buffer.update_agent_status(
+                        "Crypto Market Analyst", "completed"
+                    )
                     # Set next analyst to in_progress
                     if "social" in selections["analysts"]:
                         message_buffer.update_agent_status(
@@ -805,7 +812,9 @@ def run_analysis():
                     message_buffer.update_report_section(
                         "sentiment_report", chunk["sentiment_report"]
                     )
-                    message_buffer.update_agent_status("Crypto Social Analyst", "completed")
+                    message_buffer.update_agent_status(
+                        "Crypto Social Analyst", "completed"
+                    )
                     # Set next analyst to in_progress
                     if "news" in selections["analysts"]:
                         message_buffer.update_agent_status(
@@ -816,7 +825,9 @@ def run_analysis():
                     message_buffer.update_report_section(
                         "news_report", chunk["news_report"]
                     )
-                    message_buffer.update_agent_status("Crypto News Analyst", "completed")
+                    message_buffer.update_agent_status(
+                        "Crypto News Analyst", "completed"
+                    )
                     # Set next analyst to in_progress
                     if "fundamentals" in selections["analysts"]:
                         message_buffer.update_agent_status(
@@ -996,32 +1007,44 @@ def run_analysis():
         # HACK: create final decision when we only use incomplete graph
         if "final_trade_decision" not in final_state:
             console.print("\n[yellow]⚠ Running in Analyst-Only mode[/yellow]\n")
-            
+
             # Generate a comprehensive summary from analyst reports
             analyst_summary = []
-            
+
             # Collect all analyst reports
             if final_state.get("market_report"):
-                analyst_summary.append(f"## Market Analysis\n{final_state['market_report']}")
-            
+                analyst_summary.append(
+                    f"## Market Analysis\n{final_state['market_report']}"
+                )
+
             if final_state.get("sentiment_report"):
-                analyst_summary.append(f"## Social Sentiment Analysis\n{final_state['sentiment_report']}")
-            
+                analyst_summary.append(
+                    f"## Social Sentiment Analysis\n{final_state['sentiment_report']}"
+                )
+
             if final_state.get("news_report"):
-                analyst_summary.append(f"## News Analysis\n{final_state['news_report']}")
-            
+                analyst_summary.append(
+                    f"## News Analysis\n{final_state['news_report']}"
+                )
+
             if final_state.get("fundamentals_report"):
-                analyst_summary.append(f"## Fundamentals Analysis\n{final_state['fundamentals_report']}")
-            
+                analyst_summary.append(
+                    f"## Fundamentals Analysis\n{final_state['fundamentals_report']}"
+                )
+
             # Create comprehensive final decision
             if analyst_summary:
                 final_state["final_trade_decision"] = (
-                    "\n\n---\n\n".join(analyst_summary) +
-                    "\n\n---\n\n**NOTE:** This is an incomplete analysis containing only analyst reports. "
+                    "\n\n---\n\n".join(analyst_summary)
+                    + "\n\n---\n\n**NOTE:** This is an incomplete analysis containing only analyst reports. "
                     "Full trading decision requires Research Team, Trader, and Risk Management teams to be enabled."
                 )
             else:
                 final_state["final_trade_decision"] = "HOLD - No analyst data available"
+
+        # Dump the state to a file for inspection
+        with open("DEBUG_final_state.json", "w") as f:
+            json.dump({k: str(v)[:500] for k, v in final_state.items()}, f, indent=2)
 
         decision = graph.process_signal(final_state["final_trade_decision"])
 
@@ -1039,9 +1062,14 @@ def run_analysis():
                 message_buffer.update_report_section(section, final_state[section])
 
         # HACK: For incomplete workflow, also update final_trade_decision with analyst reports
-        if "investment_debate_state" not in final_state and "trader_investment_plan" not in final_state:
+        if (
+            "investment_debate_state" not in final_state
+            and "trader_investment_plan" not in final_state
+        ):
             # This is analyst-only mode
-            message_buffer.update_report_section("final_trade_decision", final_state.get("final_trade_decision", ""))
+            message_buffer.update_report_section(
+                "final_trade_decision", final_state.get("final_trade_decision", "")
+            )
 
         # Display the complete final report
         # Display the complete final report
@@ -1051,16 +1079,20 @@ def run_analysis():
         try:
             if message_buffer.final_report:
                 pdf_path, markdown_path = generate_trading_report_pdf(
-                    crypto_symbol=selections['ticker'],
-                    analysis_date=selections['analysis_date'],
-                    final_report=message_buffer.final_report
+                    crypto_symbol=selections["ticker"],
+                    analysis_date=selections["analysis_date"],
+                    final_report=message_buffer.final_report,
                 )
-                message_buffer.add_message("System", f"Reports saved - PDF: {pdf_path}, MD: {markdown_path}")
+                message_buffer.add_message(
+                    "System", f"Reports saved - PDF: {pdf_path}, MD: {markdown_path}"
+                )
                 console.print(f"\n[bold green]✓ Reports Generated:[/bold green]")
                 console.print(f"  PDF: {pdf_path}")
                 console.print(f"  Markdown: {markdown_path}")
             else:
-                console.print("\n[yellow]⚠ No final report available for report generation[/yellow]")
+                console.print(
+                    "\n[yellow]⚠ No final report available for report generation[/yellow]"
+                )
         except Exception as e:
             message_buffer.add_message("Error", f"Report generation failed: {str(e)}")
             console.print(f"\n[red]✗ Report Generation Failed:[/red] {str(e)}")

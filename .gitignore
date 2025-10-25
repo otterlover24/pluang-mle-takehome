@@ -1,5 +1,6 @@
 # Secrets stored in .env
 .env
+reports/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
